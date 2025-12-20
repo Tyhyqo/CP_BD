@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: cp_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cpuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cppassword}
+      POSTGRES_DB: ${POSTGRES_DB:-competitive_programming}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cpuser -d competitive_programming"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: cp_backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cpuser}:${POSTGRES_PASSWORD:-cppassword}@db:5432/${POSTGRES_DB:-competitive_programming}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:
