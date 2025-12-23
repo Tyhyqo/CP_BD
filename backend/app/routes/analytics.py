@@ -10,6 +10,95 @@ from app.database import get_db
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 
+@router.get("/top-participants")
+def get_top_participants(limit: int = 10, db: Session = Depends(get_db)):
+    """Get top participants by rating"""
+    query = text("""
+        SELECT user_id, username, full_name, country, rating, 
+               registration_date, is_active
+        FROM users 
+        WHERE role = 'participant' 
+        ORDER BY rating DESC 
+        LIMIT :limit
+    """)
+    result = db.execute(query, {"limit": limit})
+    return [dict(row._mapping) for row in result]
+
+
+@router.get("/verdict-stats")
+def get_verdict_statistics(db: Session = Depends(get_db)):
+    """Get statistics by verdict type"""
+    query = text("""
+        SELECT verdict, COUNT(*) as count 
+        FROM submissions 
+        GROUP BY verdict 
+        ORDER BY count DESC
+    """)
+    result = db.execute(query)
+    return [dict(row._mapping) for row in result]
+
+
+@router.get("/user-activity")
+def get_user_activity(limit: int = 20, db: Session = Depends(get_db)):
+    """Get user activity statistics"""
+    query = text("""
+        SELECT u.user_id, u.username, 
+               COUNT(s.submission_id) as total_submissions,
+               COUNT(DISTINCT s.contest_id) as contests_participated,
+               SUM(CASE WHEN s.verdict = 'accepted' THEN 1 ELSE 0 END) as accepted_count
+        FROM users u
+        LEFT JOIN submissions s ON u.user_id = s.user_id
+        WHERE u.role = 'participant'
+        GROUP BY u.user_id, u.username
+        ORDER BY total_submissions DESC
+        LIMIT :limit
+    """)
+    result = db.execute(query, {"limit": limit})
+    return [dict(row._mapping) for row in result]
+
+
+@router.get("/problem-difficulty")
+def get_problem_difficulty_stats(db: Session = Depends(get_db)):
+    """Get problem distribution by difficulty"""
+    query = text("""
+        SELECT difficulty, COUNT(*) as count 
+        FROM problems 
+        GROUP BY difficulty 
+        ORDER BY 
+            CASE difficulty 
+                WHEN 'easy' THEN 1 
+                WHEN 'medium' THEN 2 
+                WHEN 'hard' THEN 3 
+            END
+    """)
+    result = db.execute(query)
+    return [dict(row._mapping) for row in result]
+
+
+@router.get("/contest-summary")
+def get_contest_summary(contest_id: int, db: Session = Depends(get_db)):
+    """Get summary statistics for a contest"""
+    query = text("""
+        SELECT 
+            c.contest_id,
+            c.title,
+            c.status,
+            COUNT(DISTINCT s.user_id) as participants_count,
+            COUNT(s.submission_id) as total_submissions,
+            COUNT(DISTINCT s.problem_id) as problems_count,
+            AVG(CASE WHEN s.verdict = 'accepted' THEN s.execution_time_ms END) as avg_execution_time
+        FROM contests c
+        LEFT JOIN submissions s ON c.contest_id = s.contest_id
+        WHERE c.contest_id = :contest_id
+        GROUP BY c.contest_id, c.title, c.status
+    """)
+    result = db.execute(query, {"contest_id": contest_id})
+    row = result.first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Contest not found")
+    return dict(row._mapping)
+
+
 @router.get("/standings/{contest_id}")
 def get_contest_standings(contest_id: int, db: Session = Depends(get_db)):
     """Get contest standings using VIEW"""

@@ -3,6 +3,7 @@ Submission CRUD operations
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import List
 from app.database import get_db
 from app.models import Submission
@@ -14,11 +15,24 @@ router = APIRouter(prefix="/submissions", tags=["submissions"])
 @router.post("/", response_model=SubmissionResponse, status_code=status.HTTP_201_CREATED)
 def create_submission(submission: SubmissionCreate, db: Session = Depends(get_db)):
     """Create a new submission"""
-    db_submission = Submission(**submission.model_dump())
-    db.add(db_submission)
-    db.commit()
-    db.refresh(db_submission)
-    return db_submission
+    try:
+        db_submission = Submission(**submission.model_dump())
+        db.add(db_submission)
+        db.commit()
+        db.refresh(db_submission)
+        return db_submission
+    except IntegrityError as e:
+        db.rollback()
+        error_msg = str(e.orig)
+        if "foreign key" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid reference (user_id, contest_id, or problem_id not found): {error_msg}"
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Database constraint violation: {error_msg}"
+        )
 
 
 @router.get("/", response_model=List[SubmissionResponse])
@@ -44,13 +58,21 @@ def update_submission(submission_id: int, submission_update: SubmissionUpdate, d
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
     
-    update_data = submission_update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(submission, field, value)
-    
-    db.commit()
-    db.refresh(submission)
-    return submission
+    try:
+        update_data = submission_update.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(submission, field, value)
+        
+        db.commit()
+        db.refresh(submission)
+        return submission
+    except IntegrityError as e:
+        db.rollback()
+        error_msg = str(e.orig)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Database constraint violation: {error_msg}"
+        )
 
 
 @router.delete("/{submission_id}", status_code=status.HTTP_204_NO_CONTENT)

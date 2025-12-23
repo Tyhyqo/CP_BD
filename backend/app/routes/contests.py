@@ -3,6 +3,7 @@ Contest CRUD operations
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import List
 from app.database import get_db
 from app.models import Contest
@@ -14,11 +15,24 @@ router = APIRouter(prefix="/contests", tags=["contests"])
 @router.post("/", response_model=ContestResponse, status_code=status.HTTP_201_CREATED)
 def create_contest(contest: ContestCreate, db: Session = Depends(get_db)):
     """Create a new contest"""
-    db_contest = Contest(**contest.model_dump())
-    db.add(db_contest)
-    db.commit()
-    db.refresh(db_contest)
-    return db_contest
+    try:
+        db_contest = Contest(**contest.model_dump())
+        db.add(db_contest)
+        db.commit()
+        db.refresh(db_contest)
+        return db_contest
+    except IntegrityError as e:
+        db.rollback()
+        error_msg = str(e.orig)
+        if "foreign key" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid reference (user_id not found): {error_msg}"
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Database constraint violation: {error_msg}"
+        )
 
 
 @router.get("/", response_model=List[ContestResponse])
@@ -44,13 +58,21 @@ def update_contest(contest_id: int, contest_update: ContestUpdate, db: Session =
     if not contest:
         raise HTTPException(status_code=404, detail="Contest not found")
     
-    update_data = contest_update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(contest, field, value)
-    
-    db.commit()
-    db.refresh(contest)
-    return contest
+    try:
+        update_data = contest_update.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(contest, field, value)
+        
+        db.commit()
+        db.refresh(contest)
+        return contest
+    except IntegrityError as e:
+        db.rollback()
+        error_msg = str(e.orig)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Database constraint violation: {error_msg}"
+        )
 
 
 @router.delete("/{contest_id}", status_code=status.HTTP_204_NO_CONTENT)

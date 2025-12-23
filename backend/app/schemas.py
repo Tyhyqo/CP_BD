@@ -19,6 +19,8 @@ class UserCreate(UserBase):
     rating: int = Field(default=0, ge=0)
 
 class UserUpdate(BaseModel):
+    username: Optional[str] = Field(None, max_length=50)
+    email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     country: Optional[str] = None
     rating: Optional[int] = Field(None, ge=0)
