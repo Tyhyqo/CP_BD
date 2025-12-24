@@ -102,6 +102,10 @@ def get_contest_summary(contest_id: int, db: Session = Depends(get_db)):
 @router.get("/standings/{contest_id}")
 def get_contest_standings(contest_id: int, db: Session = Depends(get_db)):
     """Get contest standings using VIEW"""
+    check_query = text("SELECT 1 FROM contests WHERE contest_id = :contest_id")
+    if not db.execute(check_query, {"contest_id": contest_id}).fetchone():
+        raise HTTPException(status_code=404, detail="Contest not found")
+    
     query = text("""
         SELECT * FROM v_contest_standings 
         WHERE contest_id = :contest_id 
@@ -150,24 +154,41 @@ def get_verdict_distribution(db: Session = Depends(get_db)):
 @router.get("/users/{user_id}/success-rate")
 def get_user_success_rate(user_id: int, db: Session = Depends(get_db)):
     """Get user success rate using scalar function"""
+    check_query = text("SELECT 1 FROM users WHERE user_id = :user_id")
+    if not db.execute(check_query, {"user_id": user_id}).fetchone():
+        raise HTTPException(status_code=404, detail="User not found")
+    
     query = text("SELECT get_user_success_rate(:user_id) as success_rate")
     result = db.execute(query, {"user_id": user_id}).fetchone()
-    if result is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {"user_id": user_id, "success_rate": float(result[0])}
+    return {"user_id": user_id, "success_rate": float(result[0]) if result[0] is not None else 0.0}
 
 
 @router.get("/users/{user_id}/solved-count")
 def get_user_solved_count(user_id: int, db: Session = Depends(get_db)):
     """Get count of unique solved problems using scalar function"""
+    check_query = text("SELECT 1 FROM users WHERE user_id = :user_id")
+    if not db.execute(check_query, {"user_id": user_id}).fetchone():
+        raise HTTPException(status_code=404, detail="User not found")
+    
     query = text("SELECT count_unique_solved_problems(:user_id) as solved_count")
     result = db.execute(query, {"user_id": user_id}).fetchone()
-    return {"user_id": user_id, "unique_problems_solved": result[0]}
+    return {"user_id": user_id, "unique_problems_solved": result[0] if result[0] is not None else 0}
 
 
 @router.get("/users/{user_id}/contest/{contest_id}/rank")
 def get_user_contest_rank(user_id: int, contest_id: int, db: Session = Depends(get_db)):
     """Get user rank in contest using scalar function"""
+    check_query = text("""
+        SELECT 
+            EXISTS(SELECT 1 FROM users WHERE user_id = :user_id) as user_exists,
+            EXISTS(SELECT 1 FROM contests WHERE contest_id = :contest_id) as contest_exists
+    """)
+    check = db.execute(check_query, {"user_id": user_id, "contest_id": contest_id}).fetchone()
+    if not check.user_exists:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not check.contest_exists:
+        raise HTTPException(status_code=404, detail="Contest not found")
+    
     query = text("SELECT get_user_contest_rank(:user_id, :contest_id) as rank")
     result = db.execute(query, {"user_id": user_id, "contest_id": contest_id}).fetchone()
     return {"user_id": user_id, "contest_id": contest_id, "rank": result[0]}
@@ -176,9 +197,13 @@ def get_user_contest_rank(user_id: int, contest_id: int, db: Session = Depends(g
 @router.get("/problems/{problem_id}/calculated-difficulty")
 def get_calculated_difficulty(problem_id: int, db: Session = Depends(get_db)):
     """Calculate problem difficulty based on statistics"""
+    check_query = text("SELECT 1 FROM problems WHERE problem_id = :problem_id")
+    if not db.execute(check_query, {"problem_id": problem_id}).fetchone():
+        raise HTTPException(status_code=404, detail="Problem not found")
+    
     query = text("SELECT calculate_problem_difficulty(:problem_id) as difficulty")
     result = db.execute(query, {"problem_id": problem_id}).fetchone()
-    return {"problem_id": problem_id, "calculated_difficulty": result[0]}
+    return {"problem_id": problem_id, "calculated_difficulty": result[0] if result[0] else "not_enough_data"}
 
 
 @router.get("/users/top")
@@ -202,6 +227,17 @@ def get_contest_statistics(contest_id: int, db: Session = Depends(get_db)):
 @router.get("/users/{user_id}/contest/{contest_id}/report")
 def get_user_contest_report(user_id: int, contest_id: int, db: Session = Depends(get_db)):
     """Get detailed user contest report using table-valued function"""
+    check_query = text("""
+        SELECT 
+            EXISTS(SELECT 1 FROM users WHERE user_id = :user_id) as user_exists,
+            EXISTS(SELECT 1 FROM contests WHERE contest_id = :contest_id) as contest_exists
+    """)
+    check = db.execute(check_query, {"user_id": user_id, "contest_id": contest_id}).fetchone()
+    if not check.user_exists:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not check.contest_exists:
+        raise HTTPException(status_code=404, detail="Contest not found")
+    
     query = text("SELECT * FROM get_user_contest_report(:user_id, :contest_id)")
     result = db.execute(query, {"user_id": user_id, "contest_id": contest_id})
     return [dict(row._mapping) for row in result]
@@ -247,6 +283,10 @@ def get_contest_leaderboard(contest_id: int, db: Session = Depends(get_db)):
     Complex query: Get contest leaderboard with user details
     Uses JOIN, aggregation, and subqueries
     """
+    check_query = text("SELECT 1 FROM contests WHERE contest_id = :contest_id")
+    if not db.execute(check_query, {"contest_id": contest_id}).fetchone():
+        raise HTTPException(status_code=404, detail="Contest not found")
+    
     query = text("""
         WITH user_scores AS (
             SELECT 

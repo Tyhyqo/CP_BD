@@ -168,7 +168,7 @@ BEGIN
         AND s.contest_id = p_contest_id 
         AND s.user_id = p_user_id
     WHERE cp.contest_id = p_contest_id
-    GROUP BY p.problem_id, p.title
+    GROUP BY p.problem_id, p.title, cp.problem_order
     ORDER BY cp.problem_order;
 END;
 $$ LANGUAGE plpgsql;
