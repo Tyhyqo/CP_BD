@@ -15,7 +15,6 @@
   "username": "new_participant_1",
   "email": "participant1@example.com",
   "full_name": "Ivan Petrov",
-  "password_hash": "hashed_password_123",
   "role": "participant",
   "rating": 1500,
   "country": "Russia"
@@ -102,7 +101,6 @@
   "username": "new_participant_1",
   "email": "different_email@example.com",
   "full_name": "Another User",
-  "password_hash": "hash",
   "role": "participant"
 }
 ```
@@ -118,7 +116,6 @@
   "username": "different_username",
   "email": "participant1@example.com",
   "full_name": "Another User",
-  "password_hash": "hash",
   "role": "participant"
 }
 ```
@@ -188,7 +185,6 @@
   "username": "invalid_role_user",
   "email": "invalid@example.com",
   "full_name": "Test User",
-  "password_hash": "hash",
   "role": "super_admin"
 }
 ```
@@ -229,7 +225,6 @@
       "username": "batch_user_1",
       "email": "batch1@example.com",
       "full_name": "Batch User 1",
-      "password_hash": "hash",
       "role": "participant",
       "rating": 1400,
       "country": "Russia"
@@ -238,7 +233,6 @@
       "username": "batch_user_2",
       "email": "batch2@example.com",
       "full_name": "Batch User 2",
-      "password_hash": "hash",
       "role": "participant",
       "rating": 1600,
       "country": "USA"
@@ -261,21 +255,18 @@
       "username": "batch_valid_1",
       "email": "valid1@example.com",
       "full_name": "Valid User 1",
-      "password_hash": "hash",
       "role": "participant"
     },
     {
       "username": "batch_user_1",
       "email": "batch1@example.com",
       "full_name": "Duplicate",
-      "password_hash": "hash",
       "role": "participant"
     },
     {
       "username": "batch_valid_2",
       "email": "valid2@example.com",
       "full_name": "Valid User 2",
-      "password_hash": "hash",
       "role": "participant"
     }
   ]
@@ -325,43 +316,3 @@
 3. `GET /analytics/user-activity` - активность пользователей
 4. `GET /analytics/problem-difficulty` - распределение задач по сложности
 5. `GET /analytics/contest-summary?contest_id=1` - сводка по соревнованию
-
----
-
-## 🔍 ПРОВЕРКА ОШИБОК
-
-После каждого негативного теста проверьте:
-
-1. ✅ Код ответа НЕ 500 (должен быть 400/409/422)
-2. ✅ В ответе есть поле `detail` с понятным сообщением об ошибке
-3. ✅ API продолжает работать (можно сделать следующий запрос)
-
-### Пример корректного ответа на ошибку:
-
-```json
-{
-  "detail": "User already exists or constraint violation: duplicate key value violates unique constraint \"users_username_key\""
-}
-```
-
-❌ **НЕПРАВИЛЬНО:**
-
-```json
-{
-  "detail": "Internal Server Error"
-}
-```
-
----
-
-## 📝 Чек-лист тестирования
-
-- [ ] Создание валидных пользователей работает (201)
-- [ ] Дубликат username возвращает 409 (не 500)
-- [ ] Дубликат email возвращает 409 (не 500)
-- [ ] Несуществующий FK возвращает 400 (не 500)
-- [ ] Невалидные enum значения возвращают 422
-- [ ] Batch import обрабатывает частичные ошибки корректно
-- [ ] Analytics endpoints возвращают данные
-- [ ] После ошибки API продолжает работать
-- [ ] Логи не содержат traceback для обработанных ошибок

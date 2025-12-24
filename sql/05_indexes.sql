@@ -50,9 +50,3 @@ CREATE INDEX idx_audit_table ON audit_log(table_name);
 CREATE INDEX idx_audit_operation ON audit_log(operation);
 CREATE INDEX idx_audit_changed_at ON audit_log(changed_at DESC);
 CREATE INDEX idx_audit_record ON audit_log(table_name, record_id);
-
--- Комментарии
-COMMENT ON INDEX idx_users_rating IS 'Индекс для быстрого поиска топ пользователей по рейтингу';
-COMMENT ON INDEX idx_submissions_contest_user IS 'Композитный индекс для получения посылок пользователя в контесте';
-COMMENT ON INDEX idx_submissions_problem_verdict IS 'Композитный индекс для подсчета статистики по задачам';
-COMMENT ON INDEX idx_standings_rank IS 'Индекс для быстрого получения турнирной таблицы';
