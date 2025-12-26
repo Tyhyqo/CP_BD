@@ -3,8 +3,6 @@
 -- ================================================
 
 -- Индексы для таблицы Users
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_role ON users(role);
 CREATE INDEX idx_users_rating ON users(rating DESC);
 CREATE INDEX idx_users_country ON users(country);

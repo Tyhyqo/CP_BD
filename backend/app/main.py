@@ -9,35 +9,31 @@ from app.routes import users, contests, problems, submissions, analytics, batch
 app = FastAPI(
     title="Competitive Programming Contest Management System",
     description="""
-    ## Система управления соревнованиями по спортивному программированию
+    Система управления соревнованиями по спортивному программированию
     
-    ### Основные возможности:
-    - **Users**: Управление пользователями (участники, жюри, администраторы)
-    - **Contests**: Создание и управление соревнованиями
-    - **Problems**: Управление задачами с ограничениями
-    - **Submissions**: Прием и оценка решений
-    - **Analytics**: Аналитика и отчеты (использует VIEW и SQL функции)
-    - **Batch Import**: Массовая загрузка данных с логированием ошибок
+    Основные возможности:
+    - Users: Управление пользователями (участники, жюри, администраторы)
+    - Contests: Создание и управление соревнованиями
+    - Problems: Управление задачами с ограничениями
+    - Submissions: Прием и оценка решений
+    - Analytics: Аналитика и отчеты (использует VIEW и SQL функции)
+    - Batch Import: Массовая загрузка данных с логированием ошибок
     
-    ### Технологический стек:
+    Технологический стек:
     - Python 3.11
     - FastAPI
     - PostgreSQL 15
     - SQLAlchemy
     - Docker & docker-compose
     
-    ### Особенности БД:
+    Особенности БД:
     - 10 таблиц со связями 1:1, 1:N, N:M
     - Триггеры для аудита и автообновления агрегатов
     - Скалярные и табличные SQL функции
-    - 5 представлений (VIEW) для аналитики
+    - 5 представлений для аналитики
     - Индексы для оптимизации запросов
     """,
     version="1.0.0",
-    contact={
-        "name": "Course Project",
-        "url": "https://github.com",
-    },
 )
 
 # CORS middleware
@@ -65,7 +61,6 @@ def read_root():
         "message": "Competitive Programming Contest Management System API",
         "version": "1.0.0",
         "docs": "/docs",
-        "redoc": "/redoc",
         "health": "/health"
     }
 
